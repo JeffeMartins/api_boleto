@@ -1,0 +1,11 @@
+version: '3.0'
+services:
+  app:
+    container_name: 'api_ewally_boleto'
+    build: .
+    volumes:
+      - '.:/api_ewally_boleto'
+      -  '/api_ewally_boleto/node_modules'
+    ports:
+      - '3333:3333'
+    command: 'npm run start:dev'
