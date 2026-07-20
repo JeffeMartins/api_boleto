@@ -1,28 +1,25 @@
-import {Request, Response} from 'express';
-import HandleBoleto from './../services/handleBoletosService';
+import { Request, Response } from 'express';
+import ApiError from '../error/types/apiError';
+import HandleBoleto from '../services/handleBoletosService';
 
 class HandleBoletos {
 
-    public async processBoleto(req: Request, res: Response) {
-
-
+    public async processBoleto(req: Request, res: Response): Promise<Response> {
         try {
-            const boletoCode: string = req.params.code;
-            const { handleBoleto } = HandleBoleto;
+            const boleto = await HandleBoleto.handleBoleto(req.params.code);
+            return res.status(200).json(boleto);
+        } catch (error: unknown) {
+            const apiError = error instanceof ApiError
+                ? error
+                : new ApiError('Internal server error', 'ERR_INTERNAL_SERVER', 500);
 
-            const dueDate = await handleBoleto(boletoCode)
-
-            return res.status(200).json(dueDate)
-
-        } catch (err: any) {
-            res.status(err.status || 409).json({
+            return res.status(apiError.status).json({
                 error: {
-                    name: err.name,
-                    message: err.message || err.erros
-                }
+                    name: apiError.name,
+                    message: apiError.message,
+                },
             });
         }
-
     }
 }
 
