@@ -1,67 +1,52 @@
-import HandleWithDigitableNumberBoleto from './../helpers/handleBoletosHelper';
-import objectReturn from './../factory/objectReturnFactory';
-import apiError from "../error/types/apiError";
-
-interface ObjectFieldsBoleto {
-    dueDate: string;
-    financialInstitution: string;
-    coin: string;
-    formattedAmount: number;
-}
-
-interface ObjectReturnApiBancks {
-    ispb: string;
-    name: string;
-    code: number;
-    fullName: string;
-    message: string;
-    type: string;
-}
+import {
+    FinancialInstitutionNotFoundError,
+    getFinancialInstitution,
+} from '../clients/brasilApiClient';
+import {
+    BoletoResponse,
+    calculateExpirationDate,
+    convertToBarCode,
+    isValidDigitableLine,
+    parseBoletoFields,
+    sanitizeDigitableLine,
+} from '../domain/boleto';
+import ApiError from '../error/types/apiError';
 
 class HandleBoleto {
 
-    public async handleBoleto(code: string): Promise<object> {
-        const {
-            handleDueDate,
-            getFinancialInstitutionApi,
-            handleFieldsBoleto,
-            handleBarCod
-        } = HandleWithDigitableNumberBoleto;
+    public async handleBoleto(code: string): Promise<BoletoResponse> {
+        const cleanCode = sanitizeDigitableLine(code);
 
-        const {objectReturnFactory} = objectReturn;
-
-        const cleanCode = code.replace(/[^\d]+/g, '');
-
-        if (cleanCode.length !== 47) {
-            throw new apiError('number displayed is different from 47 digits', 'ERR_BAD_REQUEST', 400);
-
+        if (!isValidDigitableLine(cleanCode)) {
+            throw new ApiError('number displayed is different from 47 digits', 'ERR_BAD_REQUEST', 400);
         }
 
-        const fields: ObjectFieldsBoleto = await handleFieldsBoleto(cleanCode);
+        const fields = parseBoletoFields(cleanCode);
 
         if (fields.coin !== '9') {
-            throw new apiError('Brazilian real incompatible currency', 'ERR_BAD_REQUEST', 400);
+            throw new ApiError('Brazilian real incompatible currency', 'ERR_BAD_REQUEST', 400);
         }
 
-        if (Number(fields.formattedAmount) === 0 || Number(fields.formattedAmount) < 0) {
-            throw new apiError('Boleto do not display a defined value', 'ERR_BAD_REQUEST', 400);
+        if (Number(fields.amount) <= 0) {
+            throw new ApiError('Boleto do not display a defined value', 'ERR_BAD_REQUEST', 400);
         }
 
-        const responseApiBancks: ObjectReturnApiBancks = await getFinancialInstitutionApi(fields.financialInstitution)
+        try {
+            await getFinancialInstitution(fields.financialInstitution);
+        } catch (error) {
+            if (error instanceof FinancialInstitutionNotFoundError) {
+                throw new ApiError(error.message, 'ERR_BAD_REQUEST', 400);
+            }
 
-        if (responseApiBancks.type === 'BANK_CODE_NOT_FOUND') {
-            throw new apiError(responseApiBancks.message, 'ERR_BAD_REQUEST', 400);
+            throw error;
         }
 
-        const dueDate = await handleDueDate(cleanCode)
-
-        const BarCode = await handleBarCod(cleanCode);
-
-        const objectRequest = await objectReturnFactory(BarCode, String(fields.formattedAmount), dueDate);
-
-        return objectRequest;
+        return {
+            barCode: convertToBarCode(cleanCode),
+            amount: fields.amount,
+            expirationDate: calculateExpirationDate(cleanCode),
+        };
     }
-
 }
 
 export default new HandleBoleto();

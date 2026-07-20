@@ -1,9 +1,7 @@
-import {Router} from 'express'
-import HandleBoletos from './../controllers/handleBoletosController';
+import { Router } from 'express';
+import HandleBoletos from '../controllers/handleBoletosController';
 
 const routes = Router();
-const { processBoleto } = HandleBoletos;
-
-routes.get('/boleto/:code',  processBoleto)
+routes.get('/boleto/:code', (request, response) => HandleBoletos.processBoleto(request, response));
 
 export default routes;
