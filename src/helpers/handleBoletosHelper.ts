@@ -2,28 +2,23 @@ import axios from 'axios';
 
 class HandleWithDigitableNumberBoleto {
 
-    public async handleDueDate(code: string) {
-        //const codigoDeBarras = "3419109032618-40830675039.2216000 1589480000231 500";
-
-        const dueDate: any = code.slice(33, 37); //8948 é o que precisamos
-        const date = new Date('10/07/1997');
-
-        date.setTime(date.getTime() + dueDate * 24 * 60 * 60 * 1000); // criando a data de vencimento
-
-        const dateFinal = date.getFullYear() + '-' + ("0" + (date.getMonth() + 1)).slice(-2)+ '-' + ("0" + (date.getDate() + 1)).slice(-2); // exibição da data
-
-
-        return dateFinal;
-
+    public async handleDueDate(code: string, cycle: string = 'legacy') {
+        const factor = Number(code.slice(33,37));
+        if(factor === 0) return '';
+        if(!['legacy','2025'].includes(cycle))throw Object.assign(new Error('Invalid due date cycle'),{status:400});
+        if(cycle==='2025' && factor<1000)throw Object.assign(new Error('Invalid factor for 2025 cycle'),{status:400});
+        const base=cycle==='2025' ? Date.UTC(2025,1,22) : Date.UTC(1997,9,7);
+        const date = new Date(base + (cycle==='2025' ? factor-1000 : factor) * 86400000);
+        return date.toISOString().slice(0,10);
     }
 
     public async getFinancialInstitutionApi(code: string) {
 
-        return await axios.get(`https://brasilapi.com.br/api/banks/v1/${code}`)
+        return await axios.get(`https://brasilapi.com.br/api/banks/v1/${code}`, {timeout:5000})
             .then(res => {
                 return res.data;
             }).catch(err => {
-                return err.response.data;
+                if(err.response)return err.response.data;throw Object.assign(new Error('Bank lookup unavailable'),{status:503});
             })
 
     }
@@ -32,13 +27,9 @@ class HandleWithDigitableNumberBoleto {
         const dueDate = code.slice(33, 37);
         const financialInstitution = code.slice(0, 3);
         const coin = code.slice(3, 4);
-        const amount = code.slice(37, 45);
+        const amount = code.slice(37, 47);
 
-        let formattedAmount: string = parseInt(amount).toLocaleString('pt-br', {minimumFractionDigits: 2});
-
-        if(formattedAmount.length <= 6) {
-            formattedAmount = formattedAmount.replace(',', '.')
-        }
+        const formattedAmount = (Number(amount)/100).toFixed(2);
 
         return {
             dueDate,
