@@ -20,7 +20,7 @@ interface ObjectReturnApiBancks {
 
 class HandleBoleto {
 
-    public async handleBoleto(code: string): Promise<object> {
+    public async handleBoleto(code: string, cycle: string = 'legacy'): Promise<object> {
         const {
             handleDueDate,
             getFinancialInstitutionApi,
@@ -53,7 +53,7 @@ class HandleBoleto {
             throw new apiError(responseApiBancks.message, 'ERR_BAD_REQUEST', 400);
         }
 
-        const dueDate = await handleDueDate(cleanCode)
+        const dueDate = await handleDueDate(cleanCode, cycle)
 
         const BarCode = await handleBarCod(cleanCode);
 

@@ -1,16 +1,17 @@
+import {vi} from 'vitest';
 class MockRequestAndResponse {
     public mockRequest = () => {
         const req: any = {}
-        req.body = jest.fn().mockReturnValue(req)
-        req.params = jest.fn().mockReturnValue(req)
+        req.body = vi.fn().mockReturnValue(req)
+        req.params = vi.fn().mockReturnValue(req)
         return req
     };
 
     public mockResponse = () => {
         const res: any = {}
-        res.send = jest.fn().mockReturnValue(res)
-        res.status = jest.fn().mockReturnValue(res)
-        res.json = jest.fn().mockReturnValue(res)
+        res.send = vi.fn().mockReturnValue(res)
+        res.status = vi.fn().mockReturnValue(res)
+        res.json = vi.fn().mockReturnValue(res)
         return res
     };
 }

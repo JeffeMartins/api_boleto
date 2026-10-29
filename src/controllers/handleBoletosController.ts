@@ -10,7 +10,7 @@ class HandleBoletos {
             const boletoCode: string = req.params.code;
             const { handleBoleto } = HandleBoleto;
 
-            const dueDate = await handleBoleto(boletoCode)
+            const dueDate = await handleBoleto(boletoCode, typeof req.query?.cycle === 'string' ? req.query.cycle : 'legacy')
 
             return res.status(200).json(dueDate)
 
